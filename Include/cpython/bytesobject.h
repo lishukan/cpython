@@ -5,7 +5,7 @@
 typedef struct {
     PyObject_VAR_HEAD
     Py_hash_t ob_shash;
-    char ob_sval[1];
+    char ob_sval[1]; //指向字符串的指针，指向指针地址开始 ob_size+1个 元素
 
     /* Invariants:
      *     ob_sval contains space for 'ob_size+1' elements.

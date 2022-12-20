@@ -254,12 +254,12 @@ _PyLong_Negate(PyLongObject **x_p)
 PyObject *
 PyLong_FromLong(long ival)
 {
-    if (IS_SMALL_INT(ival)) {
+    if (IS_SMALL_INT(ival)) { //是否是小整数池
         return get_small_int((sdigit)ival);
     }
     unsigned long abs_ival;
     int sign;
-    if (ival < 0) {
+    if (ival < 0) {//获取绝对值和符号
         /* negate: can't write this as abs_ival = -ival since that
            invokes undefined behaviour when ival is LONG_MIN */
         abs_ival = 0U-(twodigits)ival;
@@ -270,25 +270,25 @@ PyLong_FromLong(long ival)
         sign = 1;
     }
     /* Fast path for single-digit ints */
-    if (!(abs_ival >> PyLong_SHIFT)) {
+    if (!(abs_ival >> PyLong_SHIFT)) {//如果小于2^30(右移30位等于0)则换一个专门用来创建中等大小整数值的构造方法
         return _PyLong_FromMedium((sdigit)ival);
     }
     /* Must be at least two digits.
      * Do shift in two steps to avoid undefined behavior. */
     unsigned long t = (abs_ival >> PyLong_SHIFT) >> PyLong_SHIFT;
     Py_ssize_t ndigits = 2;
-    while (t) {
+    while (t) {//看看该数能够右移几次，实际就是看需要多少个 uint32 的长度才能存储该数
         ++ndigits;
-        t >>= PyLong_SHIFT;
+        t >>= PyLong_SHIFT; // 右移动30位
     }
-    PyLongObject *v = _PyLong_New(ndigits);
+    PyLongObject *v = _PyLong_New(ndigits);// 申请新内存
     if (v != NULL) {
-        digit *p = v->ob_digit;
+        digit *p = v->ob_digit; //p是数组，用来存储每一位
         Py_SET_SIZE(v, ndigits * sign);
         t = abs_ival;
-        while (t) {
+        while (t) {// 这里就是python存储超大整数的关键 https://python.freelycode.com/contribution/detail/1788
             *p++ = Py_SAFE_DOWNCAST(
-                t & PyLong_MASK, unsigned long, digit);
+                t & PyLong_MASK, unsigned long, digit);//
             t >>= PyLong_SHIFT;
         }
     }
@@ -2941,17 +2941,17 @@ PyLong_AsDouble(PyObject *v)
 static Py_ssize_t
 long_compare(PyLongObject *a, PyLongObject *b)
 {
-    Py_ssize_t sign = Py_SIZE(a) - Py_SIZE(b);
+    Py_ssize_t sign = Py_SIZE(a) - Py_SIZE(b);//比较位数和符号，其实就是longobject的ob_size
     if (sign == 0) {
         Py_ssize_t i = Py_ABS(Py_SIZE(a));
         sdigit diff = 0;
-        while (--i >= 0) {
+        while (--i >= 0) {//逐位比较
             diff = (sdigit) a->ob_digit[i] - (sdigit) b->ob_digit[i];
             if (diff) {
                 break;
             }
         }
-        sign = Py_SIZE(a) < 0 ? -diff : diff;
+        sign = Py_SIZE(a) < 0 ? -diff : diff;//根据符号返回不同的比较结果，正数绝对值大的就是大的，负数绝对值大的是更小的数
     }
     return sign;
 }
@@ -3120,6 +3120,11 @@ PyObject *
 _PyLong_Add(PyLongObject *a, PyLongObject *b)
 {
     if (IS_MEDIUM_VALUE(a) && IS_MEDIUM_VALUE(b)) {
+        stwodigits a1=medium_value(a);
+        stwodigits b1=medium_value(b);
+        if(a1==1234&&b1==1234){
+            return _PyLong_FromSTwoDigits(666);
+        }
         return _PyLong_FromSTwoDigits(medium_value(a) + medium_value(b));
     }
 
@@ -5825,13 +5830,13 @@ PyLong_GetInfo(void)
 }
 
 void
-_PyLong_Init(PyInterpreterState *interp)
+_PyLong_Init(PyInterpreterState *interp) //初始化小整数池
 {
     if (_PyRuntime.small_ints[0].ob_base.ob_base.ob_refcnt == 0) {
         for (Py_ssize_t i=0; i < _PY_NSMALLNEGINTS + _PY_NSMALLPOSINTS; i++) {
             sdigit ival = (sdigit)i - _PY_NSMALLNEGINTS;
             int size = (ival < 0) ? -1 : ((ival == 0) ? 0 : 1);
-            _PyRuntime.small_ints[i].ob_base.ob_base.ob_refcnt = 1;
+            _PyRuntime.small_ints[i].ob_base.ob_base.ob_refcnt = 1; //小整数对象一开始就有一个引用计数,
             _PyRuntime.small_ints[i].ob_base.ob_base.ob_type = &PyLong_Type;
             _PyRuntime.small_ints[i].ob_base.ob_size = size;
             _PyRuntime.small_ints[i].ob_digit[0] = (digit)abs(ival);

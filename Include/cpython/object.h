@@ -374,9 +374,9 @@ PyAPI_FUNC(PyObject *) _PyObject_FunctionStr(PyObject *);
 
 #define Py_XSETREF(op, op2)                     \
     do {                                        \
-        PyObject *_py_tmp = _PyObject_CAST(op); \
+        PyObject *_py_tmp = _PyObject_CAST(op); \ //交换新对象和旧对象(的指针)
         (op) = (op2);                           \
-        Py_XDECREF(_py_tmp);                    \
+        Py_XDECREF(_py_tmp);                    \//旧对象的引用减一
     } while (0)
 
 

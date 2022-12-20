@@ -68,7 +68,7 @@ typedef struct {
 
 /* If we change this, we need to change the default value in the
    signature of gc.collect. */
-#define NUM_GENERATIONS 3
+#define NUM_GENERATIONS 3 //python 的分代回收只有3代
 /*
    NOTE: about untracking of mutable objects.
 

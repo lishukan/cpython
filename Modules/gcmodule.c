@@ -1410,7 +1410,7 @@ gc_collect_with_callback(PyThreadState *tstate, int generation)
     assert(!_PyErr_Occurred(tstate));
     Py_ssize_t result, collected, uncollectable;
     invoke_gc_callback(tstate, "start", generation, 0, 0);
-    result = gc_collect_main(tstate, generation, &collected, &uncollectable, 0);
+    result = gc_collect_main(tstate, generation, &collected, &uncollectable, 0);//核心 gc 方法
     invoke_gc_callback(tstate, "stop", generation, collected, uncollectable);
     assert(!_PyErr_Occurred(tstate));
     return result;
@@ -1465,7 +1465,7 @@ gc_collect_generations(PyThreadState *tstate)
             if (i == NUM_GENERATIONS - 1
                 && gcstate->long_lived_pending < gcstate->long_lived_total / 4)
                 continue;
-            n = gc_collect_with_callback(tstate, i);
+            n = gc_collect_with_callback(tstate, i);//
             break;
         }
     }
@@ -2236,7 +2236,7 @@ static PyObject *
 _PyObject_GC_Alloc(int use_calloc, size_t basicsize)
 {
     PyThreadState *tstate = _PyThreadState_GET();
-    GCState *gcstate = &tstate->interp->gc;
+    GCState *gcstate = &tstate->interp->gc; //获取垃圾收集器状态
     if (basicsize > PY_SSIZE_T_MAX - sizeof(PyGC_Head)) {
         return _PyErr_NoMemory(tstate);
     }
@@ -2254,17 +2254,17 @@ _PyObject_GC_Alloc(int use_calloc, size_t basicsize)
     }
     assert(((uintptr_t)g & 3) == 0);  // g must be aligned 4bytes boundary
 
-    g->_gc_next = 0;
+    g->_gc_next = 0;//初始化一个gc节点
     g->_gc_prev = 0;
-    gcstate->generations[0].count++; /* number of allocated GC objects */
+    gcstate->generations[0].count++; /* number of allocated GC objects */ //分代回收机制的出现 
     if (gcstate->generations[0].count > gcstate->generations[0].threshold &&
         gcstate->enabled &&
         gcstate->generations[0].threshold &&
         !gcstate->collecting &&
         !_PyErr_Occurred(tstate))
     {
-        gcstate->collecting = 1;
-        gc_collect_generations(tstate);
+        gcstate->collecting = 1;//开启分代回收
+        gc_collect_generations(tstate);  //开启分代回收的时候顺便检查下有没有可回收的对象
         gcstate->collecting = 0;
     }
     PyObject *op = FROM_GC(g);

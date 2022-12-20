@@ -158,7 +158,7 @@ PyBytes_FromStringAndSize(const char *str, Py_ssize_t size)
         return bytes_new_empty();
     }
 
-    op = (PyBytesObject *)_PyBytes_FromSize(size, 0);
+    op = (PyBytesObject *)_PyBytes_FromSize(size, 0);//申请了新内存
     if (op == NULL)
         return NULL;
     if (str == NULL)
@@ -192,7 +192,7 @@ PyBytes_FromString(const char *str)
     if (size == 0) {
         return bytes_new_empty();
     }
-    else if (size == 1) {
+    else if (size == 1) { //长度为1时，直接获取字符串缓冲池里的对象
         op = state->characters[*str & UCHAR_MAX];
         if (op != NULL) {
             Py_INCREF(op);
@@ -201,13 +201,13 @@ PyBytes_FromString(const char *str)
     }
 
     /* Inline PyObject_NewVar */
-    op = (PyBytesObject *)PyObject_Malloc(PyBytesObject_SIZE + size);
+    op = (PyBytesObject *)PyObject_Malloc(PyBytesObject_SIZE + size);//申请新地址
     if (op == NULL) {
         return PyErr_NoMemory();
     }
     _PyObject_InitVar((PyVarObject*)op, &PyBytes_Type, size);
     op->ob_shash = -1;
-    memcpy(op->ob_sval, str, size+1);
+    memcpy(op->ob_sval, str, size+1);// 内存拷贝，将目标字符串直接拷贝过去
     /* share short strings */
     if (size == 1) {
         assert(state->characters[*str & UCHAR_MAX] == NULL);
@@ -1422,18 +1422,18 @@ bytes_concat(PyObject *a, PyObject *b)
         goto done;
     }
 
-    result = PyBytes_FromStringAndSize(NULL, va.len + vb.len);
-    if (result != NULL) {
+    result = PyBytes_FromStringAndSize(NULL, va.len + vb.len);//申请了新内存
+    if (result != NULL) { //在新内存地址的基础上连续进行两次内存拷贝
         memcpy(PyBytes_AS_STRING(result), va.buf, va.len);
         memcpy(PyBytes_AS_STRING(result) + va.len, vb.buf, vb.len);
     }
 
   done:
-    if (va.len != -1)
+    if (va.len != -1)//释放 buffer
         PyBuffer_Release(&va);
     if (vb.len != -1)
         PyBuffer_Release(&vb);
-    return result;
+    return result;//返回新的字符串
 }
 
 static PyObject *

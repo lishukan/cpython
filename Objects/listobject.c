@@ -139,7 +139,7 @@ _PyList_DebugMallocStats(FILE *out)
 PyObject *
 PyList_New(Py_ssize_t size)
 {
-    PyListObject *op;
+    PyListObject *op;//
 
     if (size < 0) {
         PyErr_BadInternalCall();
@@ -147,20 +147,20 @@ PyList_New(Py_ssize_t size)
     }
 
 #if PyList_MAXFREELIST > 0
-    struct _Py_list_state *state = get_list_state();
+    struct _Py_list_state *state = get_list_state(); //获取列表对象的缓冲池
 #ifdef Py_DEBUG
     // PyList_New() must not be called after _PyList_Fini()
     assert(state->numfree != -1);
 #endif
-    if (PyList_MAXFREELIST && state->numfree) {
+    if (PyList_MAXFREELIST && state->numfree) {//PyList_MAXFREELIST 为80个，也就是一开始就会创建80个空列表对象等待被使用
         state->numfree--;
-        op = state->free_list[state->numfree];
-        _Py_NewReference((PyObject *)op);
+        op = state->free_list[state->numfree];//从缓冲池里拿一个新的列表对象
+        _Py_NewReference((PyObject *)op);//给新对象加上引用计数
     }
     else
 #endif
     {
-        op = PyObject_GC_New(PyListObject, &PyList_Type);
+        op = PyObject_GC_New(PyListObject, &PyList_Type);//申请内存之外还同时为垃圾回收做准备，并且同时进行一次分代回收
         if (op == NULL) {
             return NULL;
         }
@@ -169,15 +169,15 @@ PyList_New(Py_ssize_t size)
         op->ob_item = NULL;
     }
     else {
-        op->ob_item = (PyObject **) PyMem_Calloc(size, sizeof(PyObject *));
-        if (op->ob_item == NULL) {
-            Py_DECREF(op);
-            return PyErr_NoMemory();
+        op->ob_item = (PyObject **) PyMem_Calloc(size, sizeof(PyObject *));// 创建一块连续内存，包含size个指针。然后把该区域的指针赋值给ob_item
+        if (op->ob_item == NULL) { //没有内存了(不是在存储列表内元素的时候发现没有内存，而是在之前设置列表元素之前，创建用来指向元素的指针时就已经发现没内存了)
+            Py_DECREF(op);   // 刚创建的对象引用减1
+            return PyErr_NoMemory(); //抛出异常说没有内存
         }
     }
-    Py_SET_SIZE(op, size);
-    op->allocated = size;
-    _PyObject_GC_TRACK(op);
+    Py_SET_SIZE(op, size);  //
+    op->allocated = size; // 
+    _PyObject_GC_TRACK(op);//将该对象对应的gc节点放入第0代
     return (PyObject *) op;
 }
 
@@ -250,19 +250,19 @@ PyList_SetItem(PyObject *op, Py_ssize_t i,
                PyObject *newitem)
 {
     PyObject **p;
-    if (!PyList_Check(op)) {
+    if (!PyList_Check(op)) { //类型检查
         Py_XDECREF(newitem);
         PyErr_BadInternalCall();
         return -1;
     }
-    if (!valid_index(i, Py_SIZE(op))) {
+    if (!valid_index(i, Py_SIZE(op))) {//下标(索引)检查
         Py_XDECREF(newitem);
         PyErr_SetString(PyExc_IndexError,
                         "list assignment index out of range");
         return -1;
     }
     p = ((PyListObject *)op) -> ob_item + i;
-    Py_XSETREF(*p, newitem);
+    Py_XSETREF(*p, newitem); //更改该下标上的值
     return 0;
 }
 
